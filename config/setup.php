@@ -2,8 +2,8 @@
 require_once 'db.php';
 
 try {
-    $pdo->exec("CREATE DATABASE IF NOT EXISTS firstmd_saas");
-    $pdo->exec("USE firstmd_saas");
+    // ❌ Yahan se CREATE DATABASE aur USE DATABASE wali lines hata di gayi hain
+    // Taaki tables direct 'firstdoctor' DB mein hi ban jayein
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS hospitals (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -39,6 +39,8 @@ try {
         FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE
     )");
 
-    echo "✅ SaaS Database Setup Complete!";
-} catch (PDOException $e) { echo "Error: " . $e->getMessage(); }
+    echo "✅ SaaS Database Setup Complete in your current DB!";
+} catch (PDOException $e) { 
+    echo "Error: " . $e->getMessage(); 
+}
 ?>
