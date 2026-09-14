@@ -1,38 +1,35 @@
 <?php
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE); // HIDES PHP 8.1 WARNINGS THAT BREAK DESIGN
+ob_start();
 require_once '../config/db.php';
 
 if (!isset($_SESSION['doctor_id'])) { header("Location: ../auth/doctor_auth.php"); exit; }
-$did = $_SESSION['doctor_id'];
-$hid = $_SESSION['doc_hospital_id'];
+$did =$_SESSION['doctor_id'];
+$hid =$_SESSION['doc_hospital_id'];
 
-// Language Change Logic (Now completely fixes infinite loop)
-if(isset($_POST['update_lang'])) {
-    $lang = $_POST['lang'];
-    $pdo->prepare("UPDATE doctors SET preferred_lang=? WHERE id=?")->execute([$lang, $did]);
-    // Set cookie via PHP to prevent JS loop
+// Language Change Logic 
+if(isset($_POST['update_lang'])) {$lang = $_POST['lang'];$pdo->prepare("UPDATE doctors SET preferred_lang=? WHERE id=?")->execute([$lang,$did]);
     setcookie('googtrans', '/en/' . $lang, time() + (86400 * 30), "/");
     header("Location: dashboard.php"); 
     exit;
 }
 
-$doc = $pdo->prepare("SELECT name, preferred_lang FROM doctors WHERE id=?");
+$doc =$pdo->prepare("SELECT name, preferred_lang FROM doctors WHERE id=?");
 $doc->execute([$did]);
-$doctor = $doc->fetch();
+$doctor =$doc->fetch();
 
-// Force cookie if it doesn't match DB to keep translation stable
-if (!isset($_COOKIE['googtrans']) || $_COOKIE['googtrans'] !== '/en/' . $doctor['preferred_lang']) {
+if (!isset($_COOKIE['googtrans']) || $_COOKIE['googtrans'] !== '/en/' .$doctor['preferred_lang']) {
     setcookie('googtrans', '/en/' . $doctor['preferred_lang'], time() + (86400 * 30), "/");
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['approve_rx'])) {
-    $pdo->prepare("UPDATE patients SET ai_prescription=?, vitals_bp=?, vitals_sugar=?, status='completed', pharmacy_status='sent' WHERE id=?")
-        ->execute([$_POST['rx_text'], $_POST['vitals_bp'], $_POST['vitals_sugar'], $_POST['pid']]);
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['approve_rx'])) {$pdo->prepare("UPDATE patients SET ai_prescription=?, vitals_bp=?, vitals_sugar=?, status='completed', pharmacy_status='sent' WHERE id=?")
+        ->execute([$_POST['rx_text'],$_POST['vitals_bp'], $_POST['vitals_sugar'],$_POST['pid']]);
     header("Location: dashboard.php"); 
     exit;
 }
 
-// FETCH QUEUE: Newest patients first (ORDER BY id DESC)
-$patients = $pdo->prepare("SELECT * FROM patients WHERE doctor_id=? AND status IN ('waiting', 'vitals_done') ORDER BY id DESC");
+// FETCH QUEUE: Newest patients first
+$patients =$pdo->prepare("SELECT * FROM patients WHERE doctor_id=? AND status IN ('waiting', 'vitals_done') ORDER BY id DESC");
 $patients->execute([$did]);
 ?>
 <!DOCTYPE html>
@@ -41,8 +38,8 @@ $patients->execute([$did]);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doctor Dashboard</title>
-    <!-- Stable Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
             body * { visibility: hidden; }
@@ -50,36 +47,39 @@ $patients->execute([$did]);
             .print-area { position: absolute; left: 0; top: 0; width: 100%; }
             .no-print { display: none !important; }
         }
-        /* Hide Google Translate top bar */
         .skiptranslate iframe, .goog-te-banner-frame { display: none !important; }
         body { top: 0px !important; font-family: sans-serif; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
 
-    <!-- Google Translate Script -->
     <div id="google_translate_element" style="display:none;"></div>
     <script type="text/javascript">
+        var prefLang = '<?= $doctor['preferred_lang'] ?? 'en' ?>';
+        var expectedCookie = '/en/' + prefLang;
+        if (document.cookie.indexOf('googtrans=' + expectedCookie) === -1) {
+            document.cookie = "googtrans=" + expectedCookie + "; path=/";
+            if(prefLang !== 'en') { window.location.reload(); }
+        }
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({pageLanguage: 'en', autoDisplay: false}, 'google_translate_element');
         }
     </script>
-    <script type="text/javascript" src="//[translate.google.com/translate_a/element.js?cb=googleTranslateElementInit](https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit)"></script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     <!-- Navbar -->
     <nav class="bg-white shadow px-6 py-4 flex justify-between items-center no-print">
-        <h1 class="text-xl font-bold text-blue-600">Dr. <?= htmlspecialchars($doctor['name']) ?>'s Triage</h1>
+        <h1 class="text-xl font-bold text-blue-600">Dr. <?= htmlspecialchars($doctor['name'] ?? 'Doctor') ?>'s Triage</h1>
         
         <div class="flex items-center gap-4">
             <form method="POST" class="flex items-center gap-2">
                 <span class="text-xs font-bold text-slate-500">Dashboard Language:</span>
                 <input type="hidden" name="update_lang" value="1">
-                <!-- Dropdown now uses onchange="this.form.submit()" which is clean and safe -->
                 <select name="lang" onchange="this.form.submit()" class="border border-slate-300 rounded p-1.5 text-sm outline-none cursor-pointer font-medium bg-slate-50">
-                    <option value="en" <?= $doctor['preferred_lang']=='en'?'selected':'' ?>>English</option>
-                    <option value="hi" <?= $doctor['preferred_lang']=='hi'?'selected':'' ?>>Hindi (हिंदी)</option>
-                    <option value="mr" <?= $doctor['preferred_lang']=='mr'?'selected':'' ?>>Marathi (मराठी)</option>
-                    <option value="gu" <?= $doctor['preferred_lang']=='gu'?'selected':'' ?>>Gujarati</option>
+                    <option value="en" <?= ($doctor['preferred_lang']??'en')=='en'?'selected':'' ?>>English</option>
+                    <option value="hi" <?= ($doctor['preferred_lang']??'en')=='hi'?'selected':'' ?>>Hindi (हिंदी)</option>
+                    <option value="mr" <?= ($doctor['preferred_lang']??'en')=='mr'?'selected':'' ?>>Marathi (मराठी)</option>
+                    <option value="gu" <?= ($doctor['preferred_lang']??'en')=='gu'?'selected':'' ?>>Gujarati</option>
                 </select>
             </form>
             <a href="profile.php" class="text-blue-600 text-sm font-bold underline hover:text-blue-800">Edit Profile</a>
@@ -88,7 +88,7 @@ $patients->execute([$did]);
     </nav>
 
     <div class="max-w-6xl mx-auto p-6 grid gap-6 no-print">
-        <?php foreach($patients as $p): ?>
+        <?php foreach($patients as$p): ?>
         
         <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden print-area" id="patient-<?= $p['id'] ?>">
             
@@ -97,8 +97,8 @@ $patients->execute([$did]);
                 
                 <div class="bg-slate-50 p-4 flex flex-col md:flex-row justify-between md:items-center border-b gap-4">
                     <div>
-                        <h2 class="text-xl font-bold text-slate-800 uppercase"><?= htmlspecialchars($p['name']) ?></h2>
-                        <p class="text-sm text-slate-500">Token: <span class="font-bold text-slate-700"><?= $p['token_number'] ?></span> | Contact: <?= $p['contact'] ?></p>
+                        <h2 class="text-xl font-bold text-slate-800 uppercase"><?= htmlspecialchars($p['name'] ?? 'Unknown') ?></h2>
+                        <p class="text-sm text-slate-500">Token: <span class="font-bold text-slate-700"><?= htmlspecialchars($p['token_number'] ?? '') ?></span> \vert{} Contact: <?= htmlspecialchars($p['contact'] ?? '') ?></p>
                     </div>
                     
                     <div class="flex gap-4">
@@ -117,16 +117,16 @@ $patients->execute([$did]);
                     <div class="space-y-4">
                         <div>
                             <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Patient Said (Original):</h4>
-                            <p class="text-sm bg-slate-50 p-3 rounded border italic font-medium text-slate-700">"<?= htmlspecialchars($p['symptoms_raw']) ?>"</p>
+                            <p class="text-sm bg-slate-50 p-3 rounded border italic font-medium text-slate-700">"<?= htmlspecialchars($p['symptoms_raw'] ?? 'No symptoms reported.') ?>"</p>
                         </div>
                         <div>
                             <div class="flex justify-between items-center mb-1">
                                 <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">AI Clinical Summary:</h4>
-                                <button type="button" onclick="playVoice('<?= addslashes(str_replace(["\r", "\n"], ' ', $p['ai_summary'])) ?>', '<?= $doctor['preferred_lang'] ?>')" class="no-print bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 transition shadow-sm">
+                                <button type="button" onclick="playVoice('<?= addslashes(str_replace(["\r", "\n"], ' ', $p['ai_summary'] ?? '')) ?>', '<?=$doctor['preferred_lang'] ?? 'en' ?>')" class="no-print bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 transition shadow-sm">
                                     🔊 Listen
                                 </button>
                             </div>
-                            <p class="text-sm text-slate-800 bg-blue-50/50 p-4 rounded-xl border border-blue-100 leading-relaxed font-medium shadow-inner"><?= htmlspecialchars($p['ai_summary']) ?></p>
+                            <p class="text-sm text-slate-800 bg-blue-50/50 p-4 rounded-xl border border-blue-100 leading-relaxed font-medium shadow-inner"><?= htmlspecialchars($p['ai_summary'] ?? 'Needs Evaluation') ?></p>
                         </div>
                     </div>
 
@@ -136,14 +136,14 @@ $patients->execute([$did]);
                             <span class="text-xs text-slate-400 italic">Add Medicines/Tests</span>
                         </div>
                         
-                        <textarea name="rx_text" rows="10" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-emerald-500 outline-none mb-4 text-slate-800 leading-relaxed shadow-inner"><?= htmlspecialchars($p['ai_prescription']) ?></textarea>
+                        <textarea name="rx_text" rows="10" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-emerald-500 outline-none mb-4 text-slate-800 leading-relaxed shadow-inner"><?= htmlspecialchars($p['ai_prescription'] ?? 'Pending Dr. Review') ?></textarea>
 
                         <div class="flex gap-3 no-print">
                             <button type="button" onclick="printRx('patient-<?= $p['id'] ?>')" class="w-1/3 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow-md transition flex justify-center items-center gap-2">
                                 🖨️ Print Rx
                             </button>
                             <button type="submit" name="approve_rx" class="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition flex justify-center items-center gap-2">
-                                ✅ Approve & Send to Pharmacy
+                                ✅ Approve & Send
                             </button>
                         </div>
                     </div>
@@ -169,11 +169,8 @@ $patients->execute([$did]);
                 
                 utterance.lang = voiceLang;
                 window.speechSynthesis.speak(utterance);
-            } else {
-                alert("Voice feature not supported in this browser.");
             }
         }
-
         function printRx(divId) {
             let allCards = document.querySelectorAll('.print-area');
             allCards.forEach(card => card.classList.remove('print-area'));

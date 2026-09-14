@@ -1,8 +1,14 @@
 <?php
-ob_start(); // PREVENTS PHP ERRORS FROM BREAKING THE HTML DESIGN
+error_reporting(0);
+ini_set('display_errors', 0);
+ob_start();
 require_once '../config/db.php';
+
 $pid =$_GET['pid'] ?? null;
-if (!$pid) die("Invalid Patient Session");
+if (!$pid) {
+    ob_end_clean();
+    die("Invalid Patient Session");
+}
 
 // API Key Fetch Logic
 $apiKey = getenv('GEMINI_API_KEY');
@@ -34,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['symptoms'])) {
     }";
     
     $data = ["contents" => [["parts" => [["text" => $prompt]]]]];
-    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" . trim($apiKey);
+    $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" . trim($apiKey);
     
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -44,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['symptoms'])) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     
     $res = curl_exec($ch); 
-    $curl_err = curl_error($ch);
     curl_close($ch);$ai_sum = "Needs Evaluation"; 
     $ai_rx = "Pending Dr. Review"; 
     $urgency = 1;
@@ -75,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['symptoms'])) {
     $pdo->prepare("UPDATE patients SET symptoms_raw=?, ai_summary=?, ai_prescription=?, urgency_level=?, status='waiting' WHERE id=?")->execute([$sym, $ai_sum, $ai_rx, $urgency, $pid]);
     $success = true;
 }
+ob_end_clean();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -82,75 +88,84 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['symptoms'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Triage - FirstDoctor</title>
-    <!-- Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <!-- Bulletproof CSS (Bootstrap) -->
+    <link href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css)" rel="stylesheet">
     <style>
-        .pulse-ring { animation: pulse 2s infinite; }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-        }
-        body { font-family: sans-serif; }
+        body { background-color: #f8fafc; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .main-card { background: white; border-radius: 24px; padding: 40px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 600px; border: 1px solid #f1f5f9; }
+        .btn-start { background-color: #2563eb; color: white; border-radius: 12px; padding: 15px; font-weight: bold; font-size: 1.1rem; width: 100%; border: none; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: 0.3s; }
+        .btn-start:hover { background-color: #1d4ed8; color: white; }
+        .btn-mic { background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; border-radius: 12px; font-weight: bold; transition: 0.3s; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 10px;}
+        .btn-mic:hover { background-color: #ffe4e6; color: #be123c; }
+        .btn-mic.recording { background-color: #e11d48; color: white; animation: pulse 3.6s infinite; }
+        .btn-submit { background-color: #2563eb; color: white; border-radius: 12px; font-weight: bold; font-size: 1.1rem; border: none; padding: 15px; transition: 0.3s; }
+        .btn-submit:hover { background-color: #1d4ed8; color: white; }
+        .ai-avatar-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
+        .ai-avatar { width: 100px; height: 100px; background-color: #2563eb; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 10px 15px rgba(37,99,235,0.2); transition: 0.3s; }
+        .ai-bubble { background-color: #f8fafc; padding: 20px; border-radius: 16px; border-top-left-radius: 0; border: 1px solid #e2e8f0; width: 100%; text-align: center; margin-top: 15px; font-weight: 600; color: #1e40af; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        .textarea-custom { border-radius: 16px; border: 1px solid #cbd5e1; padding: 20px; font-size: 1rem; color: #334155; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); resize: none; width: 100%; margin-bottom: 15px; outline: none; }
+        .textarea-custom:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        select.custom-select { background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-weight: 500; color: #475569; outline: none; cursor: pointer; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(225, 29, 72, 0); } 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); } }
+        .pulse-ring { animation: pulseAvatar 2s infinite; }
+        @keyframes pulseAvatar { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<body>
 
-    <div class="bg-white p-6 md:p-10 rounded-3xl shadow-xl w-full max-w-xl border border-slate-100">
+    <div class="main-card">
         
         <?php if($success): ?>
-            <div class="text-center py-10">
-                <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-sm">✅</div>
-                <h2 class="text-2xl font-bold text-slate-800 mb-2">Check-in Complete!</h2>
-                <p class="text-slate-500 mb-8">Your symptoms have been securely analyzed. The doctor is reviewing your file.</p>
-                <a href="dashboard.php" class="inline-block bg-blue-600 hover:bg-blue-700 transition text-white px-8 py-3.5 rounded-xl font-bold shadow-md w-full">Go to My Dashboard</a>
+            <div class="text-center py-4">
+                <div style="width: 80px; height: 80px; background-color: #d1fae5; color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 20px;">✅</div>
+                <h2 style="font-weight: bold; color: #1e293b; margin-bottom: 10px;">Check-in Complete!</h2>
+                <p style="color: #64748b; margin-bottom: 30px;">Your symptoms have been securely analyzed. The doctor is reviewing your file.</p>
+                <a href="dashboard.php" class="btn btn-start d-block text-decoration-none">Go to My Dashboard</a>
             </div>
         <?php else: ?>
 
-            <div class="flex justify-between items-center mb-8 border-b pb-4">
-                <h2 class="text-lg font-bold text-slate-800">AI Medical Assistant</h2>
-                <select id="langSelect" class="bg-slate-100 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-blue-500 p-2.5 cursor-pointer outline-none font-medium">
-                    <option value="hi-IN" selected>Hindi (हिंदी) - Default</option>
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <h4 style="font-weight: bold; color: #1e293b; margin: 0;">AI Medical Assistant</h4>
+                <select id="langSelect" class="custom-select">
+                    <option value="hi-IN" selected>Hindi (हिंदी)</option>
                     <option value="en-US">English (US)</option>
                     <option value="mr-IN">Marathi (मराठी)</option>
                     <option value="gu-IN">Gujarati (ગુજરાતી)</option>
-                    <option value="ta-IN">Tamil (தமிழ்)</option>
-                    <option value="te-IN">Telugu (తెలుగు)</option>
-                    <option value="bn-IN">Bengali (বাংলা)</option>
                 </select>
             </div>
 
-            <div id="startOverlay" class="text-center py-10">
-                <div class="w-28 h-28 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-6xl shadow-inner">🤖</div>
-                <h3 class="text-2xl font-bold text-slate-800 mb-2">Ready for your Check-up?</h3>
-                <p class="text-slate-500 mb-8">Tap below to wake up your AI Doctor.</p>
-                <button onclick="startAiDoctor()" class="bg-blue-600 hover:bg-blue-700 text-white w-full font-bold py-4 rounded-xl shadow-lg transition text-lg flex justify-center items-center gap-2">
+            <div id="startOverlay" class="text-center py-4">
+                <div style="width: 120px; height: 120px; background-color: #dbeafe; color: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 60px; margin: 0 auto 20px;">🤖</div>
+                <h3 style="font-weight: bold; color: #1e293b; margin-bottom: 10px;">Ready for your Check-up?</h3>
+                <p style="color: #64748b; margin-bottom: 30px;">Tap below to wake up your AI Doctor.</p>
+                <button onclick="startAiDoctor()" class="btn-start">
                     Tap to Start Consultation 🎙️
                 </button>
             </div>
 
-            <div id="aiInterface" class="hidden">
-                <div class="flex flex-col items-center justify-center mb-6">
-                    <div id="aiAvatar" class="w-24 h-24 bg-blue-600 text-white rounded-full flex items-center justify-center text-5xl shadow-lg transition-all duration-300">👨‍⚕️</div>
-                    <div class="mt-5 bg-slate-50 p-4 rounded-2xl rounded-tl-none relative w-full text-center border border-slate-200 shadow-sm">
-                        <p id="aiTranscript" class="text-blue-800 font-semibold text-lg">...</p>
+            <div id="aiInterface" class="d-none">
+                <div class="ai-avatar-container">
+                    <div id="aiAvatar" class="ai-avatar">👨‍⚕️</div>
+                    <div class="ai-bubble">
+                        <p id="aiTranscript" class="mb-0">...</p>
                     </div>
                 </div>
 
-                <form method="POST" id="symptomForm" class="space-y-5">
-                    <div class="relative">
-                        <textarea id="symptomsInput" name="symptoms" rows="4" class="w-full border border-slate-300 p-4 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none text-slate-700 font-medium shadow-sm" placeholder="Type your symptoms here or tap the mic to speak..."></textarea>
-                    </div>
+                <form method="POST" id="symptomForm">
+                    <textarea id="symptomsInput" name="symptoms" rows="4" class="textarea-custom" placeholder="Type your symptoms here or tap the mic to speak..."></textarea>
 
-                    <div class="flex gap-3">
-                        <button type="button" id="micBtn" onclick="toggleMic()" class="bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 w-1/3 flex flex-col items-center justify-center py-3.5 rounded-xl transition shadow-sm font-bold">
-                            <span class="text-2xl mb-1">🎤</span>
-                            <span id="micStatus" class="text-sm">Speak</span>
-                        </button>
-                        
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-2/3 py-3.5 rounded-xl shadow-md transition font-bold text-lg">
-                            Submit to Doctor
-                        </button>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <button type="button" id="micBtn" onclick="toggleMic()" class="btn btn-mic w-100">
+                                <span style="font-size: 24px; margin-bottom: 5px;">🎤</span>
+                                <span id="micStatus">Speak</span>
+                            </button>
+                        </div>
+                        <div class="col-8">
+                            <button type="submit" class="btn btn-submit w-100 h-100">
+                                Submit to Doctor
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -179,13 +194,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['symptoms'])) {
         let isRecording = false;
 
         function startAiDoctor() {
-            startOverlay.style.display = 'none';
-            aiInterface.style.display = 'block';
+            startOverlay.classList.add('d-none');
+            aiInterface.classList.remove('d-none');
             speakWelcomeMessage();
         }
 
         langSelect.addEventListener('change', () => {
-            if (aiInterface.style.display === 'block') { speakWelcomeMessage(); }
+            if (!aiInterface.classList.contains('d-none')) { speakWelcomeMessage(); }
         });
 
         function speakWelcomeMessage() {
@@ -212,9 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['symptoms'])) {
             recognition.onstart = function() {
                 isRecording = true;
                 micStatus.innerText = "Listening...";
-                micBtn.classList.replace('bg-rose-50', 'bg-rose-600');
-                micBtn.classList.replace('text-rose-600', 'text-white');
-                micBtn.classList.add('animate-pulse');
+                micBtn.classList.add('recording');
             };
 
             recognition.onresult = function(event) {
@@ -243,9 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['symptoms'])) {
             if(isRecording) recognition.stop();
             isRecording = false;
             micStatus.innerText = "Speak";
-            micBtn.classList.replace('bg-rose-600', 'bg-rose-50');
-            micBtn.classList.replace('text-white', 'text-rose-600');
-            micBtn.classList.remove('animate-pulse');
+            micBtn.classList.remove('recording');
         }
     </script>
 </body>
