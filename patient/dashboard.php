@@ -1,6 +1,5 @@
 <?php
 require_once '../config/db.php';
-session_start();
 
 if (!isset($_SESSION['patient_user_id'])) {
     // If not logged in, show a simple login form
