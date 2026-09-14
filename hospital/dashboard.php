@@ -10,8 +10,10 @@ if (isset($_GET['action']) && isset($_GET['did'])) {
 }
 $doctors = $pdo->prepare("SELECT * FROM doctors WHERE hospital_id=?"); $doctors->execute([$hid]);
 
-// Generate QR Code Link
-$qr_link = "http://" . $_SERVER['HTTP_HOST'] . "/firstmd/patient/check_in.php?hid=" . $hid;
+// Generate QR Code Link for specific Doctor
+$hid = $_SESSION['doc_hospital_id'];
+$did = $_SESSION['doctor_id'];
+$qr_link = "http://" . $_SERVER['HTTP_HOST'] . "/firstdoctor/patient/check_in.php?hid=" . $hid . "&did=" . $did;
 $qr_img = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($qr_link);
 ?>
 <!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script></head>
