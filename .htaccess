@@ -1,0 +1,27 @@
+Options -Indexes
+
+RewriteEngine On
+RewriteBase /
+
+# ==========================================
+# 1. ULTIMATE .ENV BLOCKER (FOR LITESPEED & APACHE)
+# ==========================================
+
+RewriteRule ^\.env$ - [F,L,NC]
+RewriteRule (^\.|/\.) - [F,L,NC]
+
+# Fallback block just in case
+<FilesMatch "^\.env">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ==========================================
+# 2. REMOVE .PHP EXTENSION (CLEAN URLS)
+# ==========================================
+RewriteCond %{THE_REQUEST} /([^.]+)\.php [NC]
+RewriteRule ^ /%1 [NC,L,R=301]
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [NC,L]
