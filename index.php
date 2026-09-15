@@ -159,7 +159,7 @@
                 </div>
                 <div class="md:w-1/2">
                     <div class="text-primary font-bold text-xl mb-2">Step 03</div>
-                    <h3 class="text-3xl font-bold mb-4">100-Year Expert Clinical Summary</h3>
+                    <h3 class="text-3xl font-bold mb-4">Expert Clinical Summary</h3>
                     <p class="text-slate-400 text-lg leading-relaxed">
                         As the patient enters, the doctor is already looking at an ultra-precise, medically translated clinical summary. No time wasted on repetitive questions. The doctor focuses entirely on examining and healing the patient.
                     </p>
