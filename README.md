@@ -1,7 +1,7 @@
 <div align="center">
 
 # FirstDoctor AI
-**The Next-Generation Multilingual AI Clinical Decision Support System**
+**A multilingual Generative AI clinical assistant that breaks language barriers, providing doctors with expert medical summaries and smart auto-prescriptions via QR triage.**
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-firstdoctor.ishwarrathod.com-06b6d4?style=for-the-badge&logo=google-chrome)](http://firstdoctor.ishwarrathod.com)
 [![Tech Stack](https://img.shields.io/badge/Tech-PHP%20|%20TailwindCSS%20|%20MySQL-3b82f6?style=for-the-badge)](#)
@@ -125,7 +125,7 @@ We have deployed a live staging environment. Evaluators and judges can use the f
 
 **2. Setup Database:**
 * Create a MySQL database named `firstdoctor_db`.
-* Import the provided SQL schema or simply run `update_db.php` in your browser to execute auto-migrations.
+* Import the provided database.sql file into your MySQL server.
 
 **3. Configure Environment Variables:**
 * Create a `.env` file in the root directory.
